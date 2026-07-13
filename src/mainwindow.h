@@ -1,13 +1,13 @@
 #pragma once
 
 #include "database/databasemanager.h"
+#include "dictionary/dictionarymanager.h"
 #include "review/reviewscheduler.h"
 
 #include <QLabel>
 #include <QHash>
 #include <QLineEdit>
 #include <QMainWindow>
-#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -43,9 +43,12 @@ private:
     void setRatingButtonsEnabled(bool enabled);
     void resetStudyProgress();
     void importPdf();
+    void importEcdictDictionary();
+    void updateDictionaryStatus();
     void addSelectedPdfWord();
 
     DatabaseManager m_database;
+    DictionaryManager m_dictionary;
     QLabel *m_statusLabel = nullptr;
     QLabel *m_summaryLabel = nullptr;
     QLabel *m_reviewProgressLabel = nullptr;
@@ -53,12 +56,15 @@ private:
     QLabel *m_reviewAnswerLabel = nullptr;
     QLabel *m_statisticsLabel = nullptr;
     QLabel *m_pdfPathLabel = nullptr;
+    QLabel *m_dictionaryStatusLabel = nullptr;
     QTableWidget *m_wordsTable = nullptr;
     QLineEdit *m_searchEdit = nullptr;
     QLineEdit *m_wordEdit = nullptr;
     QLineEdit *m_definitionEdit = nullptr;
     QTextEdit *m_exampleEdit = nullptr;
-    QPlainTextEdit *m_pdfTextEdit = nullptr;
+    class QPdfDocument *m_pdfDocument = nullptr;
+    class PdfSelectableView *m_pdfView = nullptr;
+    class QSpinBox *m_pdfPageSpinBox = nullptr;
     QPushButton *m_updateButton = nullptr;
     QPushButton *m_deleteButton = nullptr;
     QPushButton *m_showAnswerButton = nullptr;

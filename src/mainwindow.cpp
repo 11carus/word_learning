@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "pdf/pdfselectableview.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -13,7 +14,9 @@
 #include <QPdfDocument>
 #include <QPushButton>
 #include <QRegularExpression>
-#include <QStringList>
+#include <QShortcut>
+#include <QSizePolicy>
+#include <QSpinBox>
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -162,26 +165,81 @@ QWidget *MainWindow::createPdfPage()
     titleFont.setPointSize(20);
     titleFont.setBold(true);
     title->setFont(titleFont);
+    title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     m_pdfPathLabel = new QLabel(tr("仅支持带文本层的 PDF 文件"), page);
+    m_dictionaryStatusLabel = new QLabel(page);
+    m_pdfPathLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    m_dictionaryStatusLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     auto *importButton = new QPushButton(tr("导入 PDF"), page);
-    auto *addWordButton = new QPushButton(tr("将选中单词加入生词本"), page);
-    m_pdfTextEdit = new QPlainTextEdit(page);
-    m_pdfTextEdit->setReadOnly(true);
-    m_pdfTextEdit->setPlaceholderText(tr("导入 PDF 后，正文文本会显示在这里。选中一个英文单词后可加入生词本。"));
+    auto *importDictionaryButton = new QPushButton(tr("导入 ECDICT 词典"), page);
+    auto *previousPageButton = new QPushButton(tr("上一页"), page);
+    auto *nextPageButton = new QPushButton(tr("下一页"), page);
+    auto *zoomOutButton = new QPushButton(tr("缩小"), page);
+    auto *fitWidthButton = new QPushButton(tr("适应宽度"), page);
+    auto *zoomInButton = new QPushButton(tr("放大"), page);
+    auto *zoomLabel = new QLabel(tr("适应宽度"), page);
+    m_pdfPageSpinBox = new QSpinBox(page);
+    m_pdfPageSpinBox->setPrefix(tr("第 "));
+    m_pdfPageSpinBox->setSuffix(tr(" 页"));
+    m_pdfPageSpinBox->setEnabled(false);
+    auto *addWordButton = new QPushButton(tr("将左侧选词自动加入生词本"), page);
+
+    m_pdfDocument = new QPdfDocument(this);
+    m_pdfView = new PdfSelectableView(page);
+    m_pdfView->setDocument(m_pdfDocument);
+    m_pdfView->setMinimumWidth(420);
 
     auto *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(importButton);
+    buttonLayout->addWidget(importDictionaryButton);
+    buttonLayout->addWidget(previousPageButton);
+    buttonLayout->addWidget(m_pdfPageSpinBox);
+    buttonLayout->addWidget(nextPageButton);
+    buttonLayout->addWidget(zoomOutButton);
+    buttonLayout->addWidget(fitWidthButton);
+    buttonLayout->addWidget(zoomInButton);
+    buttonLayout->addWidget(zoomLabel);
     buttonLayout->addWidget(addWordButton);
     buttonLayout->addStretch();
 
     layout->addWidget(title);
     layout->addWidget(m_pdfPathLabel);
+    layout->addWidget(m_dictionaryStatusLabel);
     layout->addLayout(buttonLayout);
-    layout->addWidget(m_pdfTextEdit);
+    layout->addWidget(m_pdfView, 1);
 
     connect(importButton, &QPushButton::clicked, this, &MainWindow::importPdf);
+    connect(importDictionaryButton, &QPushButton::clicked, this, &MainWindow::importEcdictDictionary);
     connect(addWordButton, &QPushButton::clicked, this, &MainWindow::addSelectedPdfWord);
+    connect(previousPageButton, &QPushButton::clicked, this, [this]() {
+        m_pdfView->setCurrentPage(m_pdfView->currentPage() - 1);
+    });
+    connect(nextPageButton, &QPushButton::clicked, this, [this]() {
+        m_pdfView->setCurrentPage(m_pdfView->currentPage() + 1);
+    });
+    connect(m_pdfPageSpinBox, &QSpinBox::valueChanged, this, [this](int pageNumber) {
+        m_pdfView->setCurrentPage(pageNumber - 1);
+    });
+    connect(m_pdfView, &PdfSelectableView::currentPageChanged, this, [this](int page) {
+        m_pdfPageSpinBox->blockSignals(true);
+        m_pdfPageSpinBox->setValue(page + 1);
+        m_pdfPageSpinBox->blockSignals(false);
+    });
+    connect(zoomOutButton, &QPushButton::clicked, this, [this]() {
+        m_pdfView->setZoomFactor(m_pdfView->zoomFactor() - 0.25);
+    });
+    connect(zoomInButton, &QPushButton::clicked, this, [this]() {
+        m_pdfView->setZoomFactor(m_pdfView->zoomFactor() + 0.25);
+    });
+    connect(fitWidthButton, &QPushButton::clicked, m_pdfView, &PdfSelectableView::fitToWidth);
+    connect(m_pdfView, &PdfSelectableView::zoomFactorChanged, this, [zoomLabel](qreal factor, bool fitsWidth) {
+        zoomLabel->setText(fitsWidth ? tr("适应宽度") : tr("%1%").arg(qRound(factor * 100)));
+    });
+    auto *zoomInShortcut = new QShortcut(QKeySequence::ZoomIn, page);
+    auto *zoomOutShortcut = new QShortcut(QKeySequence::ZoomOut, page);
+    connect(zoomInShortcut, &QShortcut::activated, zoomInButton, &QPushButton::click);
+    connect(zoomOutShortcut, &QShortcut::activated, zoomOutButton, &QPushButton::click);
     return page;
 }
 
@@ -282,6 +340,7 @@ void MainWindow::initializeDatabase()
 {
     const QDir appDir(QCoreApplication::applicationDirPath());
     const QString databasePath = appDir.filePath("wordflow.sqlite3");
+    const QString dictionaryPath = appDir.filePath("wordflow_dictionary.sqlite3");
 
     if (!m_database.open(databasePath)) {
         const QString message = tr("数据库初始化失败：%1").arg(m_database.lastError());
@@ -293,6 +352,10 @@ void MainWindow::initializeDatabase()
     const QString message = tr("数据库已就绪：%1").arg(databasePath);
     m_statusLabel->setText(message);
     statusBar()->showMessage(tr("就绪"));
+    if (!m_dictionary.open(dictionaryPath)) {
+        statusBar()->showMessage(tr("个人数据库已就绪；本地词典初始化失败"));
+    }
+    updateDictionaryStatus();
     loadWords();
     loadDueWords();
     updateSummary();
@@ -588,21 +651,25 @@ void MainWindow::importPdf()
         return;
     }
 
-    QPdfDocument document;
-    if (document.load(filePath) != QPdfDocument::Error::None) {
+    if (!m_pdfDocument || !m_pdfView) {
+        return;
+    }
+
+    m_pdfDocument->close();
+    if (m_pdfDocument->load(filePath) != QPdfDocument::Error::None) {
         QMessageBox::warning(this, tr("无法导入 PDF"), tr("文件无法读取、格式无效或需要密码。"));
         return;
     }
 
-    QStringList pages;
-    for (int page = 0; page < document.pageCount(); ++page) {
-        const QString pageText = document.getAllText(page).text().trimmed();
-        if (!pageText.isEmpty()) {
-            pages.append(tr("—— 第 %1 页 ——\n%2").arg(page + 1).arg(pageText));
+    bool hasTextLayer = false;
+    for (int page = 0; page < m_pdfDocument->pageCount(); ++page) {
+        if (!m_pdfDocument->getAllText(page).text().trimmed().isEmpty()) {
+            hasTextLayer = true;
+            break;
         }
     }
 
-    if (pages.isEmpty()) {
+    if (!hasTextLayer) {
         QMessageBox::information(
             this,
             tr("未提取到文本"),
@@ -611,37 +678,88 @@ void MainWindow::importPdf()
     }
 
     m_currentPdfPath = filePath;
+    m_pdfView->setDocument(m_pdfDocument);
+    m_pdfPageSpinBox->setRange(1, m_pdfDocument->pageCount());
+    m_pdfPageSpinBox->setValue(1);
+    m_pdfPageSpinBox->setEnabled(true);
     m_pdfPathLabel->setText(tr("当前文件：%1（%2 页）")
                                 .arg(QFileInfo(filePath).fileName())
-                                .arg(document.pageCount()));
-    m_pdfTextEdit->setPlainText(pages.join(QStringLiteral("\n\n")));
-    statusBar()->showMessage(tr("已导入 PDF：%1 页").arg(document.pageCount()));
+                                .arg(m_pdfDocument->pageCount()));
+    statusBar()->showMessage(tr("已导入 PDF：%1 页").arg(m_pdfDocument->pageCount()));
+}
+
+void MainWindow::importEcdictDictionary()
+{
+    const QString filePath = QFileDialog::getOpenFileName(
+        this, tr("选择 ECDICT CSV 词典"), QString(), tr("CSV 文件 (*.csv)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    if (!m_dictionary.importEcdictCsv(filePath)) {
+        QMessageBox::warning(this, tr("导入词典失败"), m_dictionary.lastError());
+        return;
+    }
+
+    updateDictionaryStatus();
+    statusBar()->showMessage(tr("ECDICT 词典导入完成：%1 条").arg(m_dictionary.entryCount()));
+}
+
+void MainWindow::updateDictionaryStatus()
+{
+    if (!m_dictionaryStatusLabel) {
+        return;
+    }
+
+    const int count = m_dictionary.entryCount();
+    if (count > 0) {
+        m_dictionaryStatusLabel->setText(tr("本地词典：已导入 %1 条词条；选词后将自动填入中文释义。").arg(count));
+    } else {
+        m_dictionaryStatusLabel->setText(
+            tr("本地词典：未导入。点击“导入 ECDICT 词典”选择 ecdict.mini.csv 或 ecdict.csv。"));
+    }
 }
 
 void MainWindow::addSelectedPdfWord()
 {
-    if (!m_pdfTextEdit || m_currentPdfPath.isEmpty()) {
+    if (!m_pdfView || m_currentPdfPath.isEmpty()) {
         QMessageBox::information(this, tr("请先导入 PDF"), tr("请先导入一个带文本层的 PDF 文件。"));
         return;
     }
 
-    QString word = m_pdfTextEdit->textCursor().selectedText();
+    QString word = m_pdfView ? m_pdfView->selectedText() : QString();
     word.replace(QChar::ParagraphSeparator, QChar::Space);
     word = word.trimmed();
     const QRegularExpression englishWord(QStringLiteral("^[A-Za-z]+(?:['-][A-Za-z]+)*$"));
     if (!englishWord.match(word).hasMatch()) {
-        QMessageBox::information(this, tr("请选择单个英文单词"), tr("请在正文中选中一个英文单词后再加入生词本。"));
+        QMessageBox::information(this, tr("请选择单个英文单词"), tr("请在左侧 PDF 页面中拖选一个英文单词后再加入生词本。"));
         return;
     }
 
-    bool accepted = false;
-    const QString definition = QInputDialog::getText(
-        this, tr("填写释义"), tr("“%1”的释义：").arg(word), QLineEdit::Normal, QString(), &accepted);
-    if (!accepted || definition.trimmed().isEmpty()) {
-        return;
+    QString definition = m_dictionary.lookup(word);
+    if (definition.isEmpty()) {
+        bool accepted = false;
+        definition = QInputDialog::getMultiLineText(
+            this,
+            tr("未找到自动释义"),
+            tr("本地词典未收录“%1”，请手动填写释义：").arg(word),
+            QString(),
+            &accepted);
+        if (!accepted || definition.trimmed().isEmpty()) {
+            return;
+        }
     }
 
     const QString source = tr("PDF：%1").arg(QFileInfo(m_currentPdfPath).fileName());
+    if (m_database.wordExists(word)) {
+        QMessageBox::information(
+            this,
+            tr("单词已存在"),
+            tr("“%1”已在生词本中，无需重复添加。").arg(word));
+        statusBar()->showMessage(tr("生词本已有单词：%1").arg(word));
+        return;
+    }
+
     if (!m_database.addWord(word, definition, QString(), source)) {
         showDatabaseError(tr("添加 PDF 生词"));
         return;

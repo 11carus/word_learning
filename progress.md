@@ -5,8 +5,8 @@
 ## 当前状态
 - **当前阶段：** 阶段 5——PDF 阅读选词扩展
 - **总体状态：** 课程 MVP 已通过用户手动验收，README 已完成更新
-- **下一步：** 实现文本型 PDF 导入、阅读与选词加入生词本
-- **最后更新：** 2026-07-13 15:40:00 +08:00
+- **下一步：** 使用真实文本型 PDF 和真实 ECDICT CSV 手动验收阅读、自动释义与入库流程
+- **最后更新：** 2026-07-13 16:20:00 +08:00
 
 ## 2026-07-13
 
@@ -198,6 +198,113 @@
   - `task_plan.md`
   - `progress.md`
 
+### 15. PDF 视觉阅读与离线自动释义
+- **状态：** implementation complete，待真实资料验收
+- PDF 阅读页改为左右分栏：左侧使用 `QPdfView` 显示原始分页 PDF，右侧保留由同一文档提取的可选文本层，便于准确选词。
+- 新增 `DictionaryManager`，将用户选择的 ECDICT CSV 导入独立 SQLite 词典库；词条查询完全离线，不上传 PDF 内容。
+- “自动释义加入生词本”会先查本地词典，命中后直接添加中文释义；未命中时才显示手动填写窗口。
+- CSV 导入支持带引号、逗号、换行和双引号转义的字段，并在 SQLite 事务中整体替换词典内容。
+- README 已增加词典下载、导入和数据存储说明。
+- 已运行 `qt-cmake --preset debug` 和 `cmake --build --preset debug`，配置与编译均通过。
+- **修改文件：**
+  - `CMakeLists.txt`
+  - `src/mainwindow.h`
+  - `src/mainwindow.cpp`
+  - `src/dictionary/dictionarymanager.h`
+  - `src/dictionary/dictionarymanager.cpp`
+  - `README.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+
+### 16. PDF 阅读页布局修复
+- **状态：** implementation complete，待用户复测
+- 根据真实运行截图定位到 `QVBoxLayout` 将额外垂直空间分给标题和状态标签，导致阅读器分栏被挤到窗口底部。
+- 已将标题、文件状态和词典状态标签设为固定垂直尺寸，并将 `QSplitter` 设为唯一的垂直伸展项；PDF 视图和文本层分别设置合理最小宽度。
+- **修改文件：**
+  - `src/mainwindow.cpp`
+  - `progress.md`
+
+### 本次构建阻塞记录
+- **状态：** resolved
+- 已完成布局代码修改，但链接阶段无法覆盖 `build/debug/wordflow.exe`：Windows 返回 `Permission denied`，表明用户当前正在运行旧版程序。
+- 未强制结束用户进程；用户关闭程序后重新执行构建验证，`cmake --build --preset debug` 已成功生成新版 `wordflow.exe`。
+
+### 17. 左侧 PDF 直接选词
+- **状态：** implementation complete，待重新构建与用户复测
+- 用户明确要求在左侧原 PDF 页面中直接选词；原 `QPdfView` 仅负责渲染，未提供可直接获取的鼠标文本选择结果，无法满足该交互。
+- 新增 `PdfSelectableView`：以 `QPdfDocument::render()` 显示当前页面，将拖拽位置映射到 PDF 点坐标并用 `getSelection()` 获取文本，按 `QPdfSelection::bounds()` 绘制选中高亮。
+- PDF 页改为单页阅读模式，加入上一页、下一页和页码跳转；“自动释义加入生词本”只读取左侧 PDF 的当前选择，右侧文本区降为参考。
+- **修改文件：**
+  - `CMakeLists.txt`
+  - `src/pdf/pdfselectableview.h`
+  - `src/pdf/pdfselectableview.cpp`
+  - `src/mainwindow.h`
+  - `src/mainwindow.cpp`
+  - `README.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+
+### 左侧选词构建错误记录
+- **状态：** resolved
+- 首次构建发现 `QPdfSelection` 的默认构造函数为私有，不能以空对象形式作为控件成员保存。
+- 已改用 `std::optional<QPdfSelection>` 表示“当前没有选择”，保留有效选择时的文本与高亮边界。
+- 修复后已运行 `qt-cmake --preset debug` 和 `cmake --build --preset debug`；配置、编译和链接均通过。
+
+### 18. PDF 清晰度与单栏阅读
+- **状态：** implementation complete，待用户复测
+- 用户反馈左侧整页缩放后文字偏糊，并要求删除右侧文本栏。
+- 已删除右侧文本栏，PDF 页面独占阅读区域；渲染策略改为按宽度显示，使用垂直滚动阅读完整页面。
+- 以控件屏幕 DPI 的实际像素数渲染页面，并设置图像设备像素比，避免高 DPI 显示器上的二次放大模糊。
+- 已运行 `cmake --build --preset debug`，编译与链接通过。
+- **修改文件：**
+  - `src/mainwindow.h`
+  - `src/mainwindow.cpp`
+  - `src/pdf/pdfselectableview.h`
+  - `src/pdf/pdfselectableview.cpp`
+  - `README.md`
+  - `findings.md`
+  - `progress.md`
+
+### 19. 本地词典导入检查与阅读滚轮
+- **状态：** implementation complete，待用户复测
+- 已检查项目目录和用户下载目录，未发现 `ecdict*.csv`、词典 SQLite 或 DB 文件；现有“导入 ECDICT 词典”入口可在用户提供/下载 CSV 后导入。
+- PDF 阅读区新增滚轮加速：鼠标滚轮和触控板像素滚动均按约两倍增量移动，方便阅读长页。
+- 已运行 `cmake --build --preset debug`，编译与链接通过。
+- **修改文件：**
+  - `src/pdf/pdfselectableview.h`
+  - `src/pdf/pdfselectableview.cpp`
+  - `progress.md`
+
+### 20. PDF 重复生词提示
+- **状态：** implementation complete，待用户复测
+- 用户截图显示重复加入单词时触发 SQLite 的 `words.word` 唯一约束，并直接显示底层错误。
+- 新增不区分大小写的单词存在检查；从 PDF 加词前如已存在，会显示“已在生词本中”的清晰提示并保持数据不变。
+- 已运行 `cmake --build --preset debug`，编译与链接通过。
+- **修改文件：**
+  - `src/database/databasemanager.h`
+  - `src/database/databasemanager.cpp`
+  - `src/mainwindow.cpp`
+  - `progress.md`
+
+### 21. PDF 缩放与课程交付材料
+- **状态：** implementation complete，待提交推送
+- PDF 工具栏新增缩小、适应宽度、放大按钮，并提供系统标准放大/缩小快捷键；放大后支持横向和纵向滚动，保持左侧 PDF 直接选词。
+- 新增 `docs/course-delivery.md`，包含技术环境、模块关系图、算法说明、T01-T10 与扩展测试记录、演示步骤和截图清单。
+- `ecdict*.csv` 已加入 `.gitignore`，用户下载的本地词典不会被提交到 GitHub。
+- 已运行 `cmake --build --preset debug` 与 `git diff --check`，构建和格式检查通过。
+- **修改文件：**
+  - `.gitignore`
+  - `README.md`
+  - `docs/course-delivery.md`
+  - `src/pdf/pdfselectableview.h`
+  - `src/pdf/pdfselectableview.cpp`
+  - `src/mainwindow.cpp`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+
 ## 测试结果
 | 测试 | 输入 | 预期结果 | 实际结果 | 状态 |
 |------|------|---------|---------|------|
@@ -219,6 +326,7 @@
 | 本轮重复阈值编译 | `cmake --build --preset debug` | 队列重排与阈值代码编译通过 | 编译链接成功 | passed |
 | 清空学习进度编译 | `cmake --build --preset debug` | 重置数据库与统计页按钮代码编译通过 | 编译链接成功 | passed |
 | PDF 阅读编译 | `qt-cmake --preset debug` + `cmake --build --preset debug` | Qt PDF 模块、文本提取和选词入库代码可编译 | 配置与编译链接成功 | passed |
+| PDF 视觉阅读与词典编译 | `qt-cmake --preset debug` + `cmake --build --preset debug` | PdfWidgets、CSV 词典导入与自动释义代码可编译 | 配置与编译链接成功 | passed |
 
 ## 错误日志
 | 环节 | 错误 | 尝试次数 | 解决方案 | 状态 |

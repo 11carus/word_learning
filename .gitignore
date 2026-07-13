@@ -13,6 +13,7 @@ CMakeUserPresets.json
 *.db
 *.sqlite
 *.sqlite3
+ecdict*.csv
 data/*.db
 data/*.sqlite
 data/*.sqlite3

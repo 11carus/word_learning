@@ -28,6 +28,7 @@ public:
 
     QList<WordEntry> words(const QString &keyword = QString()) const;
     QList<WordEntry> dueWords(const QDate &date = QDate::currentDate()) const;
+    bool wordExists(const QString &word) const;
     bool addWord(const QString &word, const QString &definition, const QString &example,
                  const QString &source = QString());
     bool updateWord(int id, const QString &word, const QString &definition, const QString &example);

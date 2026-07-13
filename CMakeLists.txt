@@ -19,6 +19,10 @@ qt_add_executable(wordflow
     src/mainwindow.h
     src/database/databasemanager.cpp
     src/database/databasemanager.h
+    src/dictionary/dictionarymanager.cpp
+    src/dictionary/dictionarymanager.h
+    src/pdf/pdfselectableview.cpp
+    src/pdf/pdfselectableview.h
     src/review/reviewscheduler.cpp
     src/review/reviewscheduler.h
 )

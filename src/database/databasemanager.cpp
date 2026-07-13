@@ -122,6 +122,14 @@ QList<WordEntry> DatabaseManager::dueWords(const QDate &date) const
     return entries;
 }
 
+bool DatabaseManager::wordExists(const QString &word) const
+{
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral("SELECT 1 FROM words WHERE word = :word COLLATE NOCASE LIMIT 1"));
+    query.bindValue(QStringLiteral(":word"), word.trimmed());
+    return query.exec() && query.next();
+}
+
 bool DatabaseManager::addWord(const QString &word, const QString &definition, const QString &example,
                               const QString &source)
 {
