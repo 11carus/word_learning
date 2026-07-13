@@ -14,6 +14,10 @@ struct WordEntry
     QString source;
     QDate nextReviewDate;
     int reviewCount = 0;
+    int intervalDays = 0;
+    double easeFactor = 2.3;
+    int lapseCount = 0;
+    QDate lastReviewDate;
     QString createdAt;
 };
 
@@ -33,7 +37,8 @@ public:
                  const QString &source = QString());
     bool updateWord(int id, const QString &word, const QString &definition, const QString &example);
     bool deleteWord(int id);
-    bool recordReview(int wordId, int rating, const QDate &nextReviewDate);
+    bool recordReview(int wordId, int rating, const QDate &nextReviewDate, int intervalDays,
+                      double easeFactor, int lapseCount, const QDate &reviewDate = QDate::currentDate());
     bool resetStudyProgress();
     int totalWordCount() const;
     int totalReviewCount() const;
@@ -42,7 +47,7 @@ public:
 
 private:
     bool createTables();
-    bool ensureWordSourceColumn();
+    bool ensureWordColumns();
     void setLastError(const QString &message) const;
 
     QString m_connectionName;

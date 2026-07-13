@@ -10,9 +10,22 @@ enum class ReviewRating
     Easy = 4
 };
 
+struct ReviewSchedule
+{
+    QDate nextReviewDate;
+    int intervalDays = 1;
+    double easeFactor = 2.3;
+    int lapseCount = 0;
+    double retrievability = 0.0;
+};
+
 class ReviewScheduler
 {
 public:
-    static QDate nextReviewDate(ReviewRating rating, const QDate &today = QDate::currentDate());
+    static ReviewSchedule schedule(ReviewRating rating,
+                                   int previousIntervalDays,
+                                   double previousEaseFactor,
+                                   int previousLapseCount,
+                                   const QDate &lastReviewDate,
+                                   const QDate &today = QDate::currentDate());
 };
-

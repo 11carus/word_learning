@@ -103,10 +103,10 @@ QWidget *MainWindow::createReviewPage()
     m_reviewAnswerLabel->setMinimumHeight(110);
 
     m_showAnswerButton = new QPushButton(tr("显示答案"), page);
-    m_againButton = new QPushButton(tr("Again\n1 天"), page);
-    m_hardButton = new QPushButton(tr("Hard\n2 天"), page);
-    m_goodButton = new QPushButton(tr("Good\n4 天"), page);
-    m_easyButton = new QPushButton(tr("Easy\n7 天"), page);
+    m_againButton = new QPushButton(tr("Again\n重置间隔"), page);
+    m_hardButton = new QPushButton(tr("Hard\n较短间隔"), page);
+    m_goodButton = new QPushButton(tr("Good\n正常间隔"), page);
+    m_easyButton = new QPushButton(tr("Easy\n延长间隔"), page);
 
     auto *ratingLayout = new QHBoxLayout();
     ratingLayout->addWidget(m_againButton);
@@ -581,8 +581,18 @@ void MainWindow::rateCurrentWord(ReviewRating rating)
     }
 
     const WordEntry &entry = m_dueWords.at(m_currentReviewIndex);
-    const QDate nextReviewDate = ReviewScheduler::nextReviewDate(rating);
-    if (!m_database.recordReview(entry.id, static_cast<int>(rating), nextReviewDate)) {
+    const ReviewSchedule schedule = ReviewScheduler::schedule(
+        rating,
+        entry.intervalDays,
+        entry.easeFactor,
+        entry.lapseCount,
+        entry.lastReviewDate);
+    if (!m_database.recordReview(entry.id,
+                                 static_cast<int>(rating),
+                                 schedule.nextReviewDate,
+                                 schedule.intervalDays,
+                                 schedule.easeFactor,
+                                 schedule.lapseCount)) {
         showDatabaseError(tr("保存复习记录"));
         return;
     }
@@ -592,7 +602,13 @@ void MainWindow::rateCurrentWord(ReviewRating rating)
         && attempts < kMaximumSessionAttempts;
     if (shouldRepeatInSession) {
         m_sessionReviewAttempts.insert(entry.id, attempts + 1);
-        m_dueWords.append(entry);
+        WordEntry repeatedEntry = entry;
+        repeatedEntry.nextReviewDate = schedule.nextReviewDate;
+        repeatedEntry.intervalDays = schedule.intervalDays;
+        repeatedEntry.easeFactor = schedule.easeFactor;
+        repeatedEntry.lapseCount = schedule.lapseCount;
+        repeatedEntry.lastReviewDate = QDate::currentDate();
+        m_dueWords.append(repeatedEntry);
     }
 
     ++m_currentReviewIndex;
@@ -600,7 +616,10 @@ void MainWindow::rateCurrentWord(ReviewRating rating)
     updateSummary();
     showCurrentReviewWord();
 
-    QString message = tr("已安排下次复习：%1").arg(nextReviewDate.toString(Qt::ISODate));
+    QString message = tr("已安排 %1 天后复习：%2（当前记忆保持估计 %3%）")
+                          .arg(schedule.intervalDays)
+                          .arg(schedule.nextReviewDate.toString(Qt::ISODate))
+                          .arg(qRound(schedule.retrievability * 100));
     if (shouldRepeatInSession) {
         message += tr("；本轮将再次复习（%1/%2）")
                        .arg(attempts + 1)
