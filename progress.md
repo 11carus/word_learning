@@ -3,10 +3,10 @@
 > 更新约定：每次完成实现、配置、测试、文档修改或重要决策后立即更新。记录采用时间顺序追加，不覆盖历史。
 
 ## 当前状态
-- **当前阶段：** 阶段 3——仓库与项目骨架
-- **总体状态：** 本地 Git、Qt Widgets/CMake 骨架和 SQLite 初始化已完成
-- **下一步：** 推送首次项目骨架提交，随后实现单词管理 CRUD
-- **最后更新：** 2026-07-13 14:34:00 +08:00
+- **当前阶段：** 阶段 4——课程 MVP 核心功能实现
+- **总体状态：** 本地 Git、GitHub 远程、Qt Widgets/CMake 骨架和 SQLite 初始化已完成
+- **下一步：** 实现单词管理 CRUD
+- **最后更新：** 2026-07-13 14:36:40 +08:00
 
 ## 2026-07-13
 
@@ -85,7 +85,9 @@
 - 最终 `git status --short` 显示项目文件均为未跟踪新文件，尚未创建提交；`git diff --stat` 为空属于新仓库未跟踪文件的正常表现。
 - 用户提供 GitHub 仓库 `11carus/word_learning` 后，已添加远程 `origin`。
 - 远程 `main` 已有一个初始 README 提交，本地分支已切换为跟踪 `origin/main`，避免覆盖远程历史。
-- Git 还未配置提交身份，下一步将在仓库本地设置提交身份并创建首次项目骨架提交。
+- 本机未配置 Git 提交身份，已在仓库本地配置 `11carus <11carus@users.noreply.github.com>`。
+- 创建提交 `b743fee Initialize Qt Widgets project skeleton`。
+- 已推送到 `origin/main`，远程从 `b2109d2` 更新到 `b743fee`。
 - **创建/修改：**
   - `.gitignore`
   - `CMakeLists.txt`
@@ -129,16 +131,16 @@
 | 任务合并 | `tasks.md` 初次为0字节 | 1 | 用户重新指定文件后读取到内容并完成合并 | resolved |
 | Git核对 | 项目尚未初始化Git仓库 | 1 | 已执行 `git init -b main` | resolved |
 | GitHub远程 | 远程仓库地址尚未提供 | 1 | 用户提供仓库后已添加 `origin` 并抓取远程 `main` | resolved |
-| Git提交身份 | 本机未配置 `user.name` / `user.email` | 1 | 准备在仓库本地配置 GitHub noreply 身份 | pending |
+| Git提交身份 | 本机未配置 `user.name` / `user.email` | 1 | 已在仓库本地配置 GitHub noreply 身份 | resolved |
 
 ## 五问重启检查
 | 问题 | 答案 |
 |------|------|
-| 我在哪里？ | 阶段3：仓库与项目骨架 |
+| 我在哪里？ | 阶段4：课程 MVP 核心功能实现 |
 | 我要去哪里？ | 完成设计、仓库骨架、核心功能、测试和课程交付 |
 | 目标是什么？ | 完成支持PDF阅读选词与间隔复习的Qt背单词软件 |
 | 我学到了什么？ | 见 `findings.md` |
-| 我做了什么？ | 已完成需求梳理、技能安装、环境安装、任务书合并和 Qt Widgets/CMake/SQLite 骨架 |
+| 我做了什么？ | 已完成需求梳理、技能安装、环境安装、任务书合并、Qt Widgets/CMake/SQLite 骨架和 GitHub 首次推送 |
 
 ---
 *每个阶段完成后、每次测试后或出现错误时更新本文件。*
