@@ -289,11 +289,12 @@
   - `progress.md`
 
 ### 21. PDF 缩放与课程交付材料
-- **状态：** implementation complete，待提交推送
+- **状态：** complete
 - PDF 工具栏新增缩小、适应宽度、放大按钮，并提供系统标准放大/缩小快捷键；放大后支持横向和纵向滚动，保持左侧 PDF 直接选词。
 - 新增 `docs/course-delivery.md`，包含技术环境、模块关系图、算法说明、T01-T10 与扩展测试记录、演示步骤和截图清单。
 - `ecdict*.csv` 已加入 `.gitignore`，用户下载的本地词典不会被提交到 GitHub。
 - 已运行 `cmake --build --preset debug` 与 `git diff --check`，构建和格式检查通过。
+- 已提交 `4348391 Improve PDF reading controls and delivery docs` 并推送至 `origin/main`。
 - **修改文件：**
   - `.gitignore`
   - `README.md`
