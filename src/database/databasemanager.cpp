@@ -224,6 +224,43 @@ bool DatabaseManager::recordReview(int wordId, int rating, const QDate &nextRevi
     return true;
 }
 
+bool DatabaseManager::resetStudyProgress()
+{
+    if (!m_database.transaction()) {
+        setLastError(m_database.lastError().text());
+        return false;
+    }
+
+    QSqlQuery clearLogsQuery(m_database);
+    if (!clearLogsQuery.exec(QStringLiteral("DELETE FROM review_logs"))) {
+        setLastError(clearLogsQuery.lastError().text());
+        m_database.rollback();
+        return false;
+    }
+
+    QSqlQuery resetWordsQuery(m_database);
+    resetWordsQuery.prepare(QStringLiteral(R"(
+        UPDATE words
+        SET next_review_date = :today,
+            review_count = 0
+    )"));
+    resetWordsQuery.bindValue(QStringLiteral(":today"), QDate::currentDate().toString(Qt::ISODate));
+
+    if (!resetWordsQuery.exec()) {
+        setLastError(resetWordsQuery.lastError().text());
+        m_database.rollback();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        setLastError(m_database.lastError().text());
+        m_database.rollback();
+        return false;
+    }
+
+    return true;
+}
+
 int DatabaseManager::totalWordCount() const
 {
     QSqlQuery query(m_database);

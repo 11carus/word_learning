@@ -32,6 +32,13 @@ void MainWindow::setupUi()
     tabs->addTab(createVocabularyPage(), tr("单词管理"));
     tabs->addTab(createReviewPage(), tr("复习"));
     tabs->addTab(createStatisticsPage(), tr("统计"));
+
+    connect(tabs, &QTabWidget::currentChanged, this, [this](int index) {
+        if (index == 2) {
+            loadDueWords();
+        }
+        updateSummary();
+    });
 }
 
 QWidget *MainWindow::createHomePage()
@@ -128,10 +135,14 @@ QWidget *MainWindow::createStatisticsPage()
     m_statisticsLabel = new QLabel(page);
     m_statisticsLabel->setWordWrap(true);
     m_statisticsLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    auto *resetProgressButton = new QPushButton(tr("清空学习进度"), page);
 
     layout->addWidget(title);
     layout->addWidget(m_statisticsLabel);
+    layout->addWidget(resetProgressButton, 0, Qt::AlignLeft);
     layout->addStretch();
+
+    connect(resetProgressButton, &QPushButton::clicked, this, &MainWindow::resetStudyProgress);
     return page;
 }
 
@@ -414,6 +425,10 @@ void MainWindow::updateSummary()
 void MainWindow::loadDueWords()
 {
     m_dueWords = m_database.dueWords();
+    m_sessionReviewAttempts.clear();
+    for (const WordEntry &entry : m_dueWords) {
+        m_sessionReviewAttempts.insert(entry.id, 1);
+    }
     m_currentReviewIndex = m_dueWords.isEmpty() ? -1 : 0;
     showCurrentReviewWord();
 }
@@ -470,11 +485,28 @@ void MainWindow::rateCurrentWord(ReviewRating rating)
         return;
     }
 
+    const int attempts = m_sessionReviewAttempts.value(entry.id, 1);
+    const bool shouldRepeatInSession = rating != ReviewRating::Easy
+        && attempts < kMaximumSessionAttempts;
+    if (shouldRepeatInSession) {
+        m_sessionReviewAttempts.insert(entry.id, attempts + 1);
+        m_dueWords.append(entry);
+    }
+
     ++m_currentReviewIndex;
     loadWords(m_searchEdit ? m_searchEdit->text() : QString());
     updateSummary();
     showCurrentReviewWord();
-    statusBar()->showMessage(tr("已安排下次复习：%1").arg(nextReviewDate.toString(Qt::ISODate)));
+
+    QString message = tr("已安排下次复习：%1").arg(nextReviewDate.toString(Qt::ISODate));
+    if (shouldRepeatInSession) {
+        message += tr("；本轮将再次复习（%1/%2）")
+                       .arg(attempts + 1)
+                       .arg(kMaximumSessionAttempts);
+    } else if (rating != ReviewRating::Easy && attempts >= kMaximumSessionAttempts) {
+        message += tr("；已达到本轮重复上限");
+    }
+    statusBar()->showMessage(message);
 }
 
 void MainWindow::setRatingButtonsEnabled(bool enabled)
@@ -483,4 +515,28 @@ void MainWindow::setRatingButtonsEnabled(bool enabled)
     m_hardButton->setEnabled(enabled);
     m_goodButton->setEnabled(enabled);
     m_easyButton->setEnabled(enabled);
+}
+
+void MainWindow::resetStudyProgress()
+{
+    const QMessageBox::StandardButton answer = QMessageBox::warning(
+        this,
+        tr("确认清空学习进度"),
+        tr("将删除所有复习记录，并把所有单词恢复为今日待复习、复习次数为 0。生词本不会被删除。是否继续？"),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    if (!m_database.resetStudyProgress()) {
+        showDatabaseError(tr("清空学习进度"));
+        return;
+    }
+
+    loadWords(m_searchEdit ? m_searchEdit->text() : QString());
+    loadDueWords();
+    updateSummary();
+    statusBar()->showMessage(tr("学习进度已清空，所有单词均可重新复习"));
 }

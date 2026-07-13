@@ -4,6 +4,7 @@
 #include "review/reviewscheduler.h"
 
 #include <QLabel>
+#include <QHash>
 #include <QLineEdit>
 #include <QMainWindow>
 #include <QPushButton>
@@ -38,6 +39,7 @@ private:
     void revealReviewAnswer();
     void rateCurrentWord(ReviewRating rating);
     void setRatingButtonsEnabled(bool enabled);
+    void resetStudyProgress();
 
     DatabaseManager m_database;
     QLabel *m_statusLabel = nullptr;
@@ -59,5 +61,7 @@ private:
     QPushButton *m_goodButton = nullptr;
     QPushButton *m_easyButton = nullptr;
     QList<WordEntry> m_dueWords;
+    QHash<int, int> m_sessionReviewAttempts;
     int m_currentReviewIndex = -1;
+    static constexpr int kMaximumSessionAttempts = 3;
 };

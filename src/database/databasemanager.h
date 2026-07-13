@@ -31,6 +31,7 @@ public:
     bool updateWord(int id, const QString &word, const QString &definition, const QString &example);
     bool deleteWord(int id);
     bool recordReview(int wordId, int rating, const QDate &nextReviewDate);
+    bool resetStudyProgress();
     int totalWordCount() const;
     int totalReviewCount() const;
     int dueWordCount(const QDate &date = QDate::currentDate()) const;
