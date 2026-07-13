@@ -4,9 +4,9 @@
 
 ## 当前状态
 - **当前阶段：** 阶段 4——课程 MVP 核心功能实现
-- **总体状态：** 本地 Git、GitHub 远程、Qt Widgets/CMake 骨架和 SQLite 初始化已完成
-- **下一步：** 实现单词管理 CRUD
-- **最后更新：** 2026-07-13 14:36:40 +08:00
+- **总体状态：** 单词管理 CRUD 已实现并通过编译/短启动检查
+- **下一步：** 实现今日复习查询、卡片复习和 review_logs 保存
+- **最后更新：** 2026-07-13 14:41:27 +08:00
 
 ## 2026-07-13
 
@@ -104,6 +104,26 @@
   - `findings.md`
   - `progress.md`
 
+### 8. 单词管理 CRUD
+- **状态：** complete
+- 扩展 `DatabaseManager`，新增 `WordEntry` 数据结构和 `words()`、`addWord()`、`updateWord()`、`deleteWord()`、`totalWordCount()` 方法。
+- 数据库写入统一使用参数化 SQL，避免手动拼接用户输入。
+- 添加启动时 `PRAGMA foreign_keys = ON`，为后续删除单词时同步删除复习记录做准备。
+- 将单词管理页从占位文本改为可用界面：表单输入单词、释义、例句，表格显示生词本。
+- 实现添加、修改、删除、搜索、查看全部和清空表单。
+- 删除单词前会弹出确认提示，并说明相关复习记录会一起删除。
+- 首页单词总数会在添加、修改、删除后刷新。
+- 使用 `cmake --build --preset debug` 编译成功。
+- 短启动 `wordflow.exe` 后程序保持运行，未在 3 秒内崩溃。
+- 使用 `sqlite3` 确认 `wordflow.sqlite3` 中仍存在 `words` 和 `review_logs` 表。
+- **修改文件：**
+  - `src/database/databasemanager.h`
+  - `src/database/databasemanager.cpp`
+  - `src/mainwindow.h`
+  - `src/mainwindow.cpp`
+  - `task_plan.md`
+  - `progress.md`
+
 ## 测试结果
 | 测试 | 输入 | 预期结果 | 实际结果 | 状态 |
 |------|------|---------|---------|------|
@@ -118,6 +138,8 @@
 | 项目编译 | `cmake --build --preset debug` | 生成 `wordflow.exe` | 编译链接成功 | passed |
 | 短启动检查 | 启动 `wordflow.exe` 3 秒 | 程序不崩溃 | 进程保持运行，随后手动关闭 | passed |
 | SQLite初始化 | 查询 `wordflow.sqlite3` | 存在 `words` 和 `review_logs` | 两张表均存在 | passed |
+| 单词管理编译 | `cmake --build --preset debug` | CRUD代码编译通过 | 编译链接成功 | passed |
+| 单词管理短启动 | 启动 `wordflow.exe` 3 秒 | 程序不崩溃 | 进程保持运行，随后手动关闭 | passed |
 
 ## 错误日志
 | 环节 | 错误 | 尝试次数 | 解决方案 | 状态 |
@@ -136,7 +158,7 @@
 ## 五问重启检查
 | 问题 | 答案 |
 |------|------|
-| 我在哪里？ | 阶段4：课程 MVP 核心功能实现 |
+| 我在哪里？ | 阶段4：课程 MVP 核心功能实现，单词管理 CRUD 已完成 |
 | 我要去哪里？ | 完成设计、仓库骨架、核心功能、测试和课程交付 |
 | 目标是什么？ | 完成支持PDF阅读选词与间隔复习的Qt背单词软件 |
 | 我学到了什么？ | 见 `findings.md` |
