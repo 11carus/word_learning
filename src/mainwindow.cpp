@@ -2,12 +2,18 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QPdfDocument>
 #include <QPushButton>
+#include <QRegularExpression>
+#include <QStringList>
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -32,6 +38,7 @@ void MainWindow::setupUi()
     tabs->addTab(createVocabularyPage(), tr("单词管理"));
     tabs->addTab(createReviewPage(), tr("复习"));
     tabs->addTab(createStatisticsPage(), tr("统计"));
+    tabs->addTab(createPdfPage(), tr("PDF 阅读"));
 
     connect(tabs, &QTabWidget::currentChanged, this, [this](int index) {
         if (index == 2) {
@@ -143,6 +150,38 @@ QWidget *MainWindow::createStatisticsPage()
     layout->addStretch();
 
     connect(resetProgressButton, &QPushButton::clicked, this, &MainWindow::resetStudyProgress);
+    return page;
+}
+
+QWidget *MainWindow::createPdfPage()
+{
+    auto *page = new QWidget(this);
+    auto *layout = new QVBoxLayout(page);
+    auto *title = new QLabel(tr("PDF 阅读与生词收集"), page);
+    QFont titleFont = title->font();
+    titleFont.setPointSize(20);
+    titleFont.setBold(true);
+    title->setFont(titleFont);
+
+    m_pdfPathLabel = new QLabel(tr("仅支持带文本层的 PDF 文件"), page);
+    auto *importButton = new QPushButton(tr("导入 PDF"), page);
+    auto *addWordButton = new QPushButton(tr("将选中单词加入生词本"), page);
+    m_pdfTextEdit = new QPlainTextEdit(page);
+    m_pdfTextEdit->setReadOnly(true);
+    m_pdfTextEdit->setPlaceholderText(tr("导入 PDF 后，正文文本会显示在这里。选中一个英文单词后可加入生词本。"));
+
+    auto *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(importButton);
+    buttonLayout->addWidget(addWordButton);
+    buttonLayout->addStretch();
+
+    layout->addWidget(title);
+    layout->addWidget(m_pdfPathLabel);
+    layout->addLayout(buttonLayout);
+    layout->addWidget(m_pdfTextEdit);
+
+    connect(importButton, &QPushButton::clicked, this, &MainWindow::importPdf);
+    connect(addWordButton, &QPushButton::clicked, this, &MainWindow::addSelectedPdfWord);
     return page;
 }
 
@@ -539,4 +578,76 @@ void MainWindow::resetStudyProgress()
     loadDueWords();
     updateSummary();
     statusBar()->showMessage(tr("学习进度已清空，所有单词均可重新复习"));
+}
+
+void MainWindow::importPdf()
+{
+    const QString filePath = QFileDialog::getOpenFileName(
+        this, tr("选择 PDF 文件"), QString(), tr("PDF 文件 (*.pdf)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    QPdfDocument document;
+    if (document.load(filePath) != QPdfDocument::Error::None) {
+        QMessageBox::warning(this, tr("无法导入 PDF"), tr("文件无法读取、格式无效或需要密码。"));
+        return;
+    }
+
+    QStringList pages;
+    for (int page = 0; page < document.pageCount(); ++page) {
+        const QString pageText = document.getAllText(page).text().trimmed();
+        if (!pageText.isEmpty()) {
+            pages.append(tr("—— 第 %1 页 ——\n%2").arg(page + 1).arg(pageText));
+        }
+    }
+
+    if (pages.isEmpty()) {
+        QMessageBox::information(
+            this,
+            tr("未提取到文本"),
+            tr("该 PDF 没有可提取的文本层，扫描件需要 OCR，当前版本暂不支持。"));
+        return;
+    }
+
+    m_currentPdfPath = filePath;
+    m_pdfPathLabel->setText(tr("当前文件：%1（%2 页）")
+                                .arg(QFileInfo(filePath).fileName())
+                                .arg(document.pageCount()));
+    m_pdfTextEdit->setPlainText(pages.join(QStringLiteral("\n\n")));
+    statusBar()->showMessage(tr("已导入 PDF：%1 页").arg(document.pageCount()));
+}
+
+void MainWindow::addSelectedPdfWord()
+{
+    if (!m_pdfTextEdit || m_currentPdfPath.isEmpty()) {
+        QMessageBox::information(this, tr("请先导入 PDF"), tr("请先导入一个带文本层的 PDF 文件。"));
+        return;
+    }
+
+    QString word = m_pdfTextEdit->textCursor().selectedText();
+    word.replace(QChar::ParagraphSeparator, QChar::Space);
+    word = word.trimmed();
+    const QRegularExpression englishWord(QStringLiteral("^[A-Za-z]+(?:['-][A-Za-z]+)*$"));
+    if (!englishWord.match(word).hasMatch()) {
+        QMessageBox::information(this, tr("请选择单个英文单词"), tr("请在正文中选中一个英文单词后再加入生词本。"));
+        return;
+    }
+
+    bool accepted = false;
+    const QString definition = QInputDialog::getText(
+        this, tr("填写释义"), tr("“%1”的释义：").arg(word), QLineEdit::Normal, QString(), &accepted);
+    if (!accepted || definition.trimmed().isEmpty()) {
+        return;
+    }
+
+    const QString source = tr("PDF：%1").arg(QFileInfo(m_currentPdfPath).fileName());
+    if (!m_database.addWord(word, definition, QString(), source)) {
+        showDatabaseError(tr("添加 PDF 生词"));
+        return;
+    }
+
+    loadWords(m_searchEdit ? m_searchEdit->text() : QString());
+    updateSummary();
+    statusBar()->showMessage(tr("已从 PDF 加入生词本：%1").arg(word));
 }

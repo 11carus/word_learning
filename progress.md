@@ -182,6 +182,22 @@
   - `task_plan.md`
   - `progress.md`
 
+### 14. PDF 阅读与选词入库
+- **状态：** implementation complete，待真实 PDF 验收
+- CMake 新增 Qt PDF 模块；使用 `QPdfDocument` 提取每页可用文本并显示在“PDF 阅读”页。
+- 只支持带文本层的 PDF；导入失败、加密 PDF 和扫描件会给出明确提示，扫描件 OCR 不在当前范围内。
+- 选中单个英文单词并填写释义后即可加入生词本；数据库自动保存 `PDF：文件名` 来源。
+- 为兼容已有数据库，启动时检测并按需为 `words` 表添加 `source` 字段。
+- `qt-cmake --preset debug` 和 `cmake --build --preset debug` 均已通过；项目内没有现成 PDF 样本，因此尚待真实文本型 PDF 手动验收。
+- **修改文件：**
+  - `CMakeLists.txt`
+  - `src/database/databasemanager.h`
+  - `src/database/databasemanager.cpp`
+  - `src/mainwindow.h`
+  - `src/mainwindow.cpp`
+  - `task_plan.md`
+  - `progress.md`
+
 ## 测试结果
 | 测试 | 输入 | 预期结果 | 实际结果 | 状态 |
 |------|------|---------|---------|------|
@@ -202,6 +218,7 @@
 | 复习与统计短启动 | 启动 `wordflow.exe` 3 秒 | 程序不崩溃 | 进程保持运行，随后手动关闭 | passed |
 | 本轮重复阈值编译 | `cmake --build --preset debug` | 队列重排与阈值代码编译通过 | 编译链接成功 | passed |
 | 清空学习进度编译 | `cmake --build --preset debug` | 重置数据库与统计页按钮代码编译通过 | 编译链接成功 | passed |
+| PDF 阅读编译 | `qt-cmake --preset debug` + `cmake --build --preset debug` | Qt PDF 模块、文本提取和选词入库代码可编译 | 配置与编译链接成功 | passed |
 
 ## 错误日志
 | 环节 | 错误 | 尝试次数 | 解决方案 | 状态 |

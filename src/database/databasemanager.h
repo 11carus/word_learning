@@ -11,6 +11,7 @@ struct WordEntry
     QString word;
     QString definition;
     QString example;
+    QString source;
     QDate nextReviewDate;
     int reviewCount = 0;
     QString createdAt;
@@ -27,7 +28,8 @@ public:
 
     QList<WordEntry> words(const QString &keyword = QString()) const;
     QList<WordEntry> dueWords(const QDate &date = QDate::currentDate()) const;
-    bool addWord(const QString &word, const QString &definition, const QString &example);
+    bool addWord(const QString &word, const QString &definition, const QString &example,
+                 const QString &source = QString());
     bool updateWord(int id, const QString &word, const QString &definition, const QString &example);
     bool deleteWord(int id);
     bool recordReview(int wordId, int rating, const QDate &nextReviewDate);
@@ -39,6 +41,7 @@ public:
 
 private:
     bool createTables();
+    bool ensureWordSourceColumn();
     void setLastError(const QString &message) const;
 
     QString m_connectionName;

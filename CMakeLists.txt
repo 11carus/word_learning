@@ -8,7 +8,7 @@ project(WordFlow
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Widgets Sql)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Widgets Sql Pdf)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -32,6 +32,7 @@ target_link_libraries(wordflow
     PRIVATE
         Qt6::Widgets
         Qt6::Sql
+        Qt6::Pdf
 )
 
 set_target_properties(wordflow PROPERTIES
@@ -42,4 +43,3 @@ install(TARGETS wordflow
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-

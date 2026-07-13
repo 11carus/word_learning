@@ -7,6 +7,7 @@
 #include <QHash>
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -25,6 +26,7 @@ private:
     QWidget *createVocabularyPage();
     QWidget *createReviewPage();
     QWidget *createStatisticsPage();
+    QWidget *createPdfPage();
     void loadWords(const QString &keyword = QString());
     void clearWordForm();
     void populateFormFromSelection();
@@ -40,6 +42,8 @@ private:
     void rateCurrentWord(ReviewRating rating);
     void setRatingButtonsEnabled(bool enabled);
     void resetStudyProgress();
+    void importPdf();
+    void addSelectedPdfWord();
 
     DatabaseManager m_database;
     QLabel *m_statusLabel = nullptr;
@@ -48,11 +52,13 @@ private:
     QLabel *m_reviewWordLabel = nullptr;
     QLabel *m_reviewAnswerLabel = nullptr;
     QLabel *m_statisticsLabel = nullptr;
+    QLabel *m_pdfPathLabel = nullptr;
     QTableWidget *m_wordsTable = nullptr;
     QLineEdit *m_searchEdit = nullptr;
     QLineEdit *m_wordEdit = nullptr;
     QLineEdit *m_definitionEdit = nullptr;
     QTextEdit *m_exampleEdit = nullptr;
+    QPlainTextEdit *m_pdfTextEdit = nullptr;
     QPushButton *m_updateButton = nullptr;
     QPushButton *m_deleteButton = nullptr;
     QPushButton *m_showAnswerButton = nullptr;
@@ -64,4 +70,5 @@ private:
     QHash<int, int> m_sessionReviewAttempts;
     int m_currentReviewIndex = -1;
     static constexpr int kMaximumSessionAttempts = 3;
+    QString m_currentPdfPath;
 };

@@ -48,7 +48,7 @@ QList<WordEntry> DatabaseManager::words(const QString &keyword) const
     QList<WordEntry> entries;
 
     QString sql = QStringLiteral(R"(
-        SELECT id, word, definition, example, next_review_date, review_count, created_at
+        SELECT id, word, definition, example, source, next_review_date, review_count, created_at
         FROM words
     )");
 
@@ -79,9 +79,10 @@ QList<WordEntry> DatabaseManager::words(const QString &keyword) const
         entry.word = query.value(1).toString();
         entry.definition = query.value(2).toString();
         entry.example = query.value(3).toString();
-        entry.nextReviewDate = QDate::fromString(query.value(4).toString(), Qt::ISODate);
-        entry.reviewCount = query.value(5).toInt();
-        entry.createdAt = query.value(6).toString();
+        entry.source = query.value(4).toString();
+        entry.nextReviewDate = QDate::fromString(query.value(5).toString(), Qt::ISODate);
+        entry.reviewCount = query.value(6).toInt();
+        entry.createdAt = query.value(7).toString();
         entries.append(entry);
     }
 
@@ -93,7 +94,7 @@ QList<WordEntry> DatabaseManager::dueWords(const QDate &date) const
     QList<WordEntry> entries;
     QSqlQuery query(m_database);
     query.prepare(QStringLiteral(R"(
-        SELECT id, word, definition, example, next_review_date, review_count, created_at
+        SELECT id, word, definition, example, source, next_review_date, review_count, created_at
         FROM words
         WHERE next_review_date <= :date
         ORDER BY next_review_date ASC, word COLLATE NOCASE ASC
@@ -111,25 +112,28 @@ QList<WordEntry> DatabaseManager::dueWords(const QDate &date) const
         entry.word = query.value(1).toString();
         entry.definition = query.value(2).toString();
         entry.example = query.value(3).toString();
-        entry.nextReviewDate = QDate::fromString(query.value(4).toString(), Qt::ISODate);
-        entry.reviewCount = query.value(5).toInt();
-        entry.createdAt = query.value(6).toString();
+        entry.source = query.value(4).toString();
+        entry.nextReviewDate = QDate::fromString(query.value(5).toString(), Qt::ISODate);
+        entry.reviewCount = query.value(6).toInt();
+        entry.createdAt = query.value(7).toString();
         entries.append(entry);
     }
 
     return entries;
 }
 
-bool DatabaseManager::addWord(const QString &word, const QString &definition, const QString &example)
+bool DatabaseManager::addWord(const QString &word, const QString &definition, const QString &example,
+                              const QString &source)
 {
     QSqlQuery query(m_database);
     query.prepare(QStringLiteral(R"(
-        INSERT INTO words (word, definition, example, next_review_date)
-        VALUES (:word, :definition, :example, :next_review_date)
+        INSERT INTO words (word, definition, example, source, next_review_date)
+        VALUES (:word, :definition, :example, :source, :next_review_date)
     )"));
     query.bindValue(QStringLiteral(":word"), word.trimmed());
     query.bindValue(QStringLiteral(":definition"), definition.trimmed());
     query.bindValue(QStringLiteral(":example"), example.trimmed());
+    query.bindValue(QStringLiteral(":source"), source.trimmed());
     query.bindValue(QStringLiteral(":next_review_date"), QDate::currentDate().toString(Qt::ISODate));
 
     if (!query.exec()) {
@@ -328,6 +332,7 @@ bool DatabaseManager::createTables()
             word TEXT NOT NULL UNIQUE,
             definition TEXT NOT NULL,
             example TEXT,
+            source TEXT,
             next_review_date TEXT NOT NULL,
             review_count INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -347,6 +352,28 @@ bool DatabaseManager::createTables()
             FOREIGN KEY(word_id) REFERENCES words(id) ON DELETE CASCADE
         )
     )"))) {
+        m_lastError = query.lastError().text();
+        return false;
+    }
+
+    return ensureWordSourceColumn();
+}
+
+bool DatabaseManager::ensureWordSourceColumn()
+{
+    QSqlQuery query(m_database);
+    if (!query.exec(QStringLiteral("PRAGMA table_info(words)"))) {
+        m_lastError = query.lastError().text();
+        return false;
+    }
+
+    while (query.next()) {
+        if (query.value(1).toString() == QStringLiteral("source")) {
+            return true;
+        }
+    }
+
+    if (!query.exec(QStringLiteral("ALTER TABLE words ADD COLUMN source TEXT"))) {
         m_lastError = query.lastError().text();
         return false;
     }
