@@ -307,12 +307,13 @@
   - `progress.md`
 
 ### 22. 遗忘曲线参考的自适应复习
-- **状态：** implementation complete，待提交推送与用户复测
+- **状态：** implementation complete，待用户复测
 - 用户要求将固定重复改进为结合艾宾浩斯遗忘曲线的记忆调度。
 - 新增单词状态：当前间隔、易度、遗忘次数、上次复习日期；启动时自动迁移已有 SQLite 数据库。
 - 使用指数遗忘近似估计保持率；Good / Easy 在较长间隔后仍答对会获得额外增长，Again 重置短间隔并降低易度。
 - 复习页按钮不再显示固定天数，状态栏会显示动态间隔、下次日期和保持率估计。
 - 已运行 `cmake --build --preset debug` 与 `git diff --check`，构建和格式检查通过。
+- 已提交 `ea47e12 Add adaptive forgetting curve review scheduling` 并推送至 `origin/main`。
 - **修改文件：**
   - `src/review/reviewscheduler.h`
   - `src/review/reviewscheduler.cpp`
