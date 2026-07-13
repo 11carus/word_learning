@@ -4,9 +4,9 @@
 
 ## 当前状态
 - **当前阶段：** 阶段 4——课程 MVP 核心功能实现
-- **总体状态：** 单词管理 CRUD 已实现并通过编译/短启动检查
-- **下一步：** 实现今日复习查询、卡片复习和 review_logs 保存
-- **最后更新：** 2026-07-13 14:41:27 +08:00
+- **总体状态：** 课程 MVP 核心功能已完成并通过编译/短启动检查
+- **下一步：** 执行 T01-T10 验收用例、整理 README 与课程交付材料
+- **最后更新：** 2026-07-13 15:06:00 +08:00
 
 ## 2026-07-13
 
@@ -124,6 +124,22 @@
   - `task_plan.md`
   - `progress.md`
 
+### 9. 卡片复习与简单统计
+- **状态：** complete
+- 新增今日到期单词查询：按下次复习日期排序显示复习卡片。
+- 复习页遵循“先显示单词、点击显示答案、再选择 Again/Hard/Good/Easy”流程；四档评分仍按 1/2/4/7 天安排下次复习。
+- `recordReview()` 使用 SQLite 事务同时插入 `review_logs` 并更新单词的下次复习日期、复习次数。
+- 首页实时显示今日待复习、单词总数和今日已复习；统计页显示单词总数、累计复习、今日已复习和当前待复习。
+- 使用 `cmake --build --preset debug` 编译成功。
+- 短启动 `wordflow.exe` 后程序保持运行，未在 3 秒内崩溃；用 `sqlite3` 核验了 `review_logs` 表结构。
+- **修改文件：**
+  - `src/database/databasemanager.h`
+  - `src/database/databasemanager.cpp`
+  - `src/mainwindow.h`
+  - `src/mainwindow.cpp`
+  - `task_plan.md`
+  - `progress.md`
+
 ## 测试结果
 | 测试 | 输入 | 预期结果 | 实际结果 | 状态 |
 |------|------|---------|---------|------|
@@ -140,6 +156,8 @@
 | SQLite初始化 | 查询 `wordflow.sqlite3` | 存在 `words` 和 `review_logs` | 两张表均存在 | passed |
 | 单词管理编译 | `cmake --build --preset debug` | CRUD代码编译通过 | 编译链接成功 | passed |
 | 单词管理短启动 | 启动 `wordflow.exe` 3 秒 | 程序不崩溃 | 进程保持运行，随后手动关闭 | passed |
+| 复习与统计编译 | `cmake --build --preset debug` | 复习和统计代码编译通过 | 编译链接成功 | passed |
+| 复习与统计短启动 | 启动 `wordflow.exe` 3 秒 | 程序不崩溃 | 进程保持运行，随后手动关闭 | passed |
 
 ## 错误日志
 | 环节 | 错误 | 尝试次数 | 解决方案 | 状态 |

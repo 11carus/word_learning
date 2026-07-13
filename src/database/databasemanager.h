@@ -26,10 +26,15 @@ public:
     QString lastError() const;
 
     QList<WordEntry> words(const QString &keyword = QString()) const;
+    QList<WordEntry> dueWords(const QDate &date = QDate::currentDate()) const;
     bool addWord(const QString &word, const QString &definition, const QString &example);
     bool updateWord(int id, const QString &word, const QString &definition, const QString &example);
     bool deleteWord(int id);
+    bool recordReview(int wordId, int rating, const QDate &nextReviewDate);
     int totalWordCount() const;
+    int totalReviewCount() const;
+    int dueWordCount(const QDate &date = QDate::currentDate()) const;
+    int reviewedCountOn(const QDate &date = QDate::currentDate()) const;
 
 private:
     bool createTables();

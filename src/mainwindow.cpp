@@ -30,8 +30,8 @@ void MainWindow::setupUi()
 
     tabs->addTab(createHomePage(), tr("首页"));
     tabs->addTab(createVocabularyPage(), tr("单词管理"));
-    tabs->addTab(new QLabel(tr("复习卡片页面将在下一步实现。"), tabs), tr("复习"));
-    tabs->addTab(new QLabel(tr("学习统计页面将在下一步实现。"), tabs), tr("统计"));
+    tabs->addTab(createReviewPage(), tr("复习"));
+    tabs->addTab(createStatisticsPage(), tr("统计"));
 }
 
 QWidget *MainWindow::createHomePage()
@@ -49,7 +49,6 @@ QWidget *MainWindow::createHomePage()
     m_statusLabel = new QLabel(tr("正在初始化数据库..."), homePage);
 
     auto *startReviewButton = new QPushButton(tr("开始复习"), homePage);
-    startReviewButton->setEnabled(false);
 
     homeLayout->addWidget(title);
     homeLayout->addWidget(m_summaryLabel);
@@ -57,7 +56,83 @@ QWidget *MainWindow::createHomePage()
     homeLayout->addStretch();
     homeLayout->addWidget(m_statusLabel);
 
+    connect(startReviewButton, &QPushButton::clicked, this, [this, tabs = qobject_cast<QTabWidget *>(centralWidget())]() {
+        if (tabs) {
+            tabs->setCurrentIndex(2);
+        }
+        loadDueWords();
+    });
+
     return homePage;
+}
+
+QWidget *MainWindow::createReviewPage()
+{
+    auto *page = new QWidget(this);
+    auto *layout = new QVBoxLayout(page);
+
+    m_reviewProgressLabel = new QLabel(tr("正在加载今日复习任务…"), page);
+    m_reviewWordLabel = new QLabel(page);
+    QFont wordFont = m_reviewWordLabel->font();
+    wordFont.setPointSize(28);
+    wordFont.setBold(true);
+    m_reviewWordLabel->setFont(wordFont);
+    m_reviewWordLabel->setAlignment(Qt::AlignCenter);
+    m_reviewWordLabel->setWordWrap(true);
+
+    m_reviewAnswerLabel = new QLabel(page);
+    m_reviewAnswerLabel->setAlignment(Qt::AlignCenter);
+    m_reviewAnswerLabel->setWordWrap(true);
+    m_reviewAnswerLabel->setMinimumHeight(110);
+
+    m_showAnswerButton = new QPushButton(tr("显示答案"), page);
+    m_againButton = new QPushButton(tr("Again\n1 天"), page);
+    m_hardButton = new QPushButton(tr("Hard\n2 天"), page);
+    m_goodButton = new QPushButton(tr("Good\n4 天"), page);
+    m_easyButton = new QPushButton(tr("Easy\n7 天"), page);
+
+    auto *ratingLayout = new QHBoxLayout();
+    ratingLayout->addWidget(m_againButton);
+    ratingLayout->addWidget(m_hardButton);
+    ratingLayout->addWidget(m_goodButton);
+    ratingLayout->addWidget(m_easyButton);
+
+    layout->addWidget(m_reviewProgressLabel);
+    layout->addStretch();
+    layout->addWidget(m_reviewWordLabel);
+    layout->addWidget(m_reviewAnswerLabel);
+    layout->addWidget(m_showAnswerButton, 0, Qt::AlignHCenter);
+    layout->addLayout(ratingLayout);
+    layout->addStretch();
+
+    connect(m_showAnswerButton, &QPushButton::clicked, this, &MainWindow::revealReviewAnswer);
+    connect(m_againButton, &QPushButton::clicked, this, [this]() { rateCurrentWord(ReviewRating::Again); });
+    connect(m_hardButton, &QPushButton::clicked, this, [this]() { rateCurrentWord(ReviewRating::Hard); });
+    connect(m_goodButton, &QPushButton::clicked, this, [this]() { rateCurrentWord(ReviewRating::Good); });
+    connect(m_easyButton, &QPushButton::clicked, this, [this]() { rateCurrentWord(ReviewRating::Easy); });
+
+    setRatingButtonsEnabled(false);
+    return page;
+}
+
+QWidget *MainWindow::createStatisticsPage()
+{
+    auto *page = new QWidget(this);
+    auto *layout = new QVBoxLayout(page);
+    auto *title = new QLabel(tr("学习统计"), page);
+    QFont titleFont = title->font();
+    titleFont.setPointSize(20);
+    titleFont.setBold(true);
+    title->setFont(titleFont);
+
+    m_statisticsLabel = new QLabel(page);
+    m_statisticsLabel->setWordWrap(true);
+    m_statisticsLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+
+    layout->addWidget(title);
+    layout->addWidget(m_statisticsLabel);
+    layout->addStretch();
+    return page;
 }
 
 QWidget *MainWindow::createVocabularyPage()
@@ -169,6 +244,7 @@ void MainWindow::initializeDatabase()
     m_statusLabel->setText(message);
     statusBar()->showMessage(tr("就绪"));
     loadWords();
+    loadDueWords();
     updateSummary();
 }
 
@@ -321,6 +397,90 @@ void MainWindow::updateSummary()
         return;
     }
 
-    m_summaryLabel->setText(tr("今日复习：0    单词总数：%1    今日已复习：0")
-                                .arg(m_database.totalWordCount()));
+    m_summaryLabel->setText(tr("今日待复习：%1    单词总数：%2    今日已复习：%3")
+                                .arg(m_database.dueWordCount())
+                                .arg(m_database.totalWordCount())
+                                .arg(m_database.reviewedCountOn()));
+
+    if (m_statisticsLabel) {
+        m_statisticsLabel->setText(tr("单词总数：%1\n\n累计复习：%2\n\n今日已复习：%3\n\n当前待复习：%4")
+                                       .arg(m_database.totalWordCount())
+                                       .arg(m_database.totalReviewCount())
+                                       .arg(m_database.reviewedCountOn())
+                                       .arg(m_database.dueWordCount()));
+    }
+}
+
+void MainWindow::loadDueWords()
+{
+    m_dueWords = m_database.dueWords();
+    m_currentReviewIndex = m_dueWords.isEmpty() ? -1 : 0;
+    showCurrentReviewWord();
+}
+
+void MainWindow::showCurrentReviewWord()
+{
+    if (!m_reviewProgressLabel || !m_reviewWordLabel || !m_reviewAnswerLabel) {
+        return;
+    }
+
+    if (m_currentReviewIndex < 0 || m_currentReviewIndex >= m_dueWords.size()) {
+        m_reviewProgressLabel->setText(tr("今日任务已完成"));
+        m_reviewWordLabel->setText(tr("做得好！"));
+        m_reviewAnswerLabel->setText(tr("没有到期单词了，可以去单词管理页添加新词。"));
+        m_showAnswerButton->setEnabled(false);
+        setRatingButtonsEnabled(false);
+        return;
+    }
+
+    const WordEntry &entry = m_dueWords.at(m_currentReviewIndex);
+    m_reviewProgressLabel->setText(tr("今日复习 %1 / %2").arg(m_currentReviewIndex + 1).arg(m_dueWords.size()));
+    m_reviewWordLabel->setText(entry.word);
+    m_reviewAnswerLabel->clear();
+    m_showAnswerButton->setEnabled(true);
+    setRatingButtonsEnabled(false);
+}
+
+void MainWindow::revealReviewAnswer()
+{
+    if (m_currentReviewIndex < 0 || m_currentReviewIndex >= m_dueWords.size()) {
+        return;
+    }
+
+    const WordEntry &entry = m_dueWords.at(m_currentReviewIndex);
+    QString answer = entry.definition;
+    if (!entry.example.trimmed().isEmpty()) {
+        answer += QStringLiteral("\n\n") + tr("例句：") + entry.example;
+    }
+    m_reviewAnswerLabel->setText(answer);
+    m_showAnswerButton->setEnabled(false);
+    setRatingButtonsEnabled(true);
+}
+
+void MainWindow::rateCurrentWord(ReviewRating rating)
+{
+    if (m_currentReviewIndex < 0 || m_currentReviewIndex >= m_dueWords.size()) {
+        return;
+    }
+
+    const WordEntry &entry = m_dueWords.at(m_currentReviewIndex);
+    const QDate nextReviewDate = ReviewScheduler::nextReviewDate(rating);
+    if (!m_database.recordReview(entry.id, static_cast<int>(rating), nextReviewDate)) {
+        showDatabaseError(tr("保存复习记录"));
+        return;
+    }
+
+    ++m_currentReviewIndex;
+    loadWords(m_searchEdit ? m_searchEdit->text() : QString());
+    updateSummary();
+    showCurrentReviewWord();
+    statusBar()->showMessage(tr("已安排下次复习：%1").arg(nextReviewDate.toString(Qt::ISODate)));
+}
+
+void MainWindow::setRatingButtonsEnabled(bool enabled)
+{
+    m_againButton->setEnabled(enabled);
+    m_hardButton->setEnabled(enabled);
+    m_goodButton->setEnabled(enabled);
+    m_easyButton->setEnabled(enabled);
 }

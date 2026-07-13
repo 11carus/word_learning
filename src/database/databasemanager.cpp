@@ -88,6 +88,38 @@ QList<WordEntry> DatabaseManager::words(const QString &keyword) const
     return entries;
 }
 
+QList<WordEntry> DatabaseManager::dueWords(const QDate &date) const
+{
+    QList<WordEntry> entries;
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral(R"(
+        SELECT id, word, definition, example, next_review_date, review_count, created_at
+        FROM words
+        WHERE next_review_date <= :date
+        ORDER BY next_review_date ASC, word COLLATE NOCASE ASC
+    )"));
+    query.bindValue(QStringLiteral(":date"), date.toString(Qt::ISODate));
+
+    if (!query.exec()) {
+        setLastError(query.lastError().text());
+        return entries;
+    }
+
+    while (query.next()) {
+        WordEntry entry;
+        entry.id = query.value(0).toInt();
+        entry.word = query.value(1).toString();
+        entry.definition = query.value(2).toString();
+        entry.example = query.value(3).toString();
+        entry.nextReviewDate = QDate::fromString(query.value(4).toString(), Qt::ISODate);
+        entry.reviewCount = query.value(5).toInt();
+        entry.createdAt = query.value(6).toString();
+        entries.append(entry);
+    }
+
+    return entries;
+}
+
 bool DatabaseManager::addWord(const QString &word, const QString &definition, const QString &example)
 {
     QSqlQuery query(m_database);
@@ -145,6 +177,53 @@ bool DatabaseManager::deleteWord(int id)
     return true;
 }
 
+bool DatabaseManager::recordReview(int wordId, int rating, const QDate &nextReviewDate)
+{
+    if (!m_database.transaction()) {
+        setLastError(m_database.lastError().text());
+        return false;
+    }
+
+    QSqlQuery logQuery(m_database);
+    logQuery.prepare(QStringLiteral(R"(
+        INSERT INTO review_logs (word_id, rating, next_review_date)
+        VALUES (:word_id, :rating, :next_review_date)
+    )"));
+    logQuery.bindValue(QStringLiteral(":word_id"), wordId);
+    logQuery.bindValue(QStringLiteral(":rating"), rating);
+    logQuery.bindValue(QStringLiteral(":next_review_date"), nextReviewDate.toString(Qt::ISODate));
+
+    if (!logQuery.exec()) {
+        setLastError(logQuery.lastError().text());
+        m_database.rollback();
+        return false;
+    }
+
+    QSqlQuery wordQuery(m_database);
+    wordQuery.prepare(QStringLiteral(R"(
+        UPDATE words
+        SET next_review_date = :next_review_date,
+            review_count = review_count + 1
+        WHERE id = :id
+    )"));
+    wordQuery.bindValue(QStringLiteral(":next_review_date"), nextReviewDate.toString(Qt::ISODate));
+    wordQuery.bindValue(QStringLiteral(":id"), wordId);
+
+    if (!wordQuery.exec() || wordQuery.numRowsAffected() != 1) {
+        setLastError(wordQuery.lastError().text());
+        m_database.rollback();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        setLastError(m_database.lastError().text());
+        m_database.rollback();
+        return false;
+    }
+
+    return true;
+}
+
 int DatabaseManager::totalWordCount() const
 {
     QSqlQuery query(m_database);
@@ -158,6 +237,48 @@ int DatabaseManager::totalWordCount() const
     }
 
     return 0;
+}
+
+int DatabaseManager::totalReviewCount() const
+{
+    QSqlQuery query(m_database);
+    if (!query.exec(QStringLiteral("SELECT COUNT(*) FROM review_logs"))) {
+        setLastError(query.lastError().text());
+        return 0;
+    }
+
+    return query.next() ? query.value(0).toInt() : 0;
+}
+
+int DatabaseManager::dueWordCount(const QDate &date) const
+{
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral("SELECT COUNT(*) FROM words WHERE next_review_date <= :date"));
+    query.bindValue(QStringLiteral(":date"), date.toString(Qt::ISODate));
+
+    if (!query.exec()) {
+        setLastError(query.lastError().text());
+        return 0;
+    }
+
+    return query.next() ? query.value(0).toInt() : 0;
+}
+
+int DatabaseManager::reviewedCountOn(const QDate &date) const
+{
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral(R"(
+        SELECT COUNT(*) FROM review_logs
+        WHERE DATE(review_date, 'localtime') = :date
+    )"));
+    query.bindValue(QStringLiteral(":date"), date.toString(Qt::ISODate));
+
+    if (!query.exec()) {
+        setLastError(query.lastError().text());
+        return 0;
+    }
+
+    return query.next() ? query.value(0).toInt() : 0;
 }
 
 bool DatabaseManager::createTables()
