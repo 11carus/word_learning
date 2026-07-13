@@ -1,45 +1,67 @@
 # WordFlow
 
-WordFlow is a lightweight offline vocabulary learning desktop app for a C++ course project.
+WordFlow 是一款使用 C++/Qt 开发的轻量级离线背单词桌面软件。项目以 Anki 的卡片复习体验为参考，支持单词管理、间隔复习、学习统计，并计划提供 PDF 阅读选词功能。
 
-## Tech Stack
+## 当前功能
 
-- C++20
-- Qt 6 Widgets
-- Qt SQL with SQLite
-- CMake
+- 生词本管理：添加、修改、删除、搜索和查看全部单词。
+- 单词信息：保存单词、释义、例句、下次复习日期和复习次数。
+- 卡片复习：先显示单词，点击“显示答案”后选择 Again、Hard、Good 或 Easy。
+- 简化间隔重复：Again / Hard / Good / Easy 分别安排到 1 / 2 / 4 / 7 天后复习。
+- 本轮重复：选择 Again、Hard 或 Good 时，单词会在当前任务队尾再次出现；每个单词在本轮最多展示 3 次。选择 Easy 则结束该单词的本轮复习。
+- 学习统计：首页与统计页显示待复习数量、单词总数、今日复习数和累计复习数。
+- 调试辅助：统计页可“清空学习进度”，保留生词本但删除复习记录，并将全部单词重置为今日待复习。
+- 本地持久化：使用 SQLite 保存数据，程序重启后仍可继续学习。
+
+## 环境要求
+
+- Windows 10/11
+- Qt 6.8 或更高版本（当前使用 Qt 6.10.3 MinGW 64-bit）
+- MinGW-w64 GCC 13.1 或与 Qt 套件匹配的编译器
+- CMake 3.20 或更高版本
 - Ninja
 
-## Current Status
+## 构建与运行
 
-The project currently contains the first runnable skeleton:
-
-- Qt Widgets main window
-- Home, vocabulary, review, and statistics tabs
-- SQLite database initialization
-- `words` and `review_logs` tables
-- Simple review scheduler for Again, Hard, Good, and Easy ratings
-
-## Build
-
-The local development environment uses Qt 6.10.3 with MinGW 13.1.
+在项目根目录执行：
 
 ```powershell
 qt-cmake --preset debug
 cmake --build --preset debug
+.\build\debug\wordflow.exe
 ```
 
-The executable is generated at:
+可执行文件位于：
 
 ```text
 build/debug/wordflow.exe
 ```
 
-## Roadmap
+## 使用说明
 
-1. Vocabulary CRUD
-2. Daily review workflow
-3. Review logs and statistics
-4. Testing and course report materials
-5. Optional PDF reading and word extraction extension
+1. 在“单词管理”页填写单词和释义，可选填写例句，点击“添加”。
+2. 打开“复习”页，点击“显示答案”，再根据掌握程度选择评分。
+3. 在“统计”页查看学习数据；调试时可点击“清空学习进度”恢复全部单词为当天待复习状态。
 
+## 数据存储
+
+默认数据库文件为：
+
+```text
+build/debug/wordflow.sqlite3
+```
+
+主要数据表：
+
+| 表 | 用途 |
+| --- | --- |
+| `words` | 单词、释义、例句、复习次数、下次复习日期 |
+| `review_logs` | 每次复习的评分、复习时间和下次复习日期 |
+
+## 后续计划
+
+下一阶段将实现仅针对“有文本层 PDF”的阅读扩展：导入 PDF、显示正文、选择阅读生词并加入生词本，同时保存来源信息。扫描版 PDF 的 OCR 不在当前版本范围内。
+
+## 项目管理
+
+代码仓库：[11carus/word_learning](https://github.com/11carus/word_learning)
