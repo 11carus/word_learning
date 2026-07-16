@@ -18,6 +18,6 @@ private:
     bool createTable();
     void setLastError(const QString &message);
 
-    QString m_connectionName;
-    QString m_lastError;
+    QString m_connectionName;    // 离线词典数据库的唯一连接名称。
+    QString m_lastError;         // 最近一次打开、导入或查询错误。
 };

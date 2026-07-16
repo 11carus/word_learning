@@ -197,16 +197,19 @@ void PdfSelectableView::updateRenderedPage()
         return;
     }
 
-    const QSizeF pagePoints = m_document->pagePointSize(m_currentPage);
-    const QSize available = viewport()->size() - QSize(2 * kPageMargin, 0);
+    const QSizeF pagePoints = m_document->pagePointSize(m_currentPage); // PDF 页面原始点尺寸。
+    const QSize available = viewport()->size() - QSize(2 * kPageMargin, 0); // 扣除页边距后的可用区域。
     if (pagePoints.isEmpty() || available.isEmpty()) {
         return;
     }
 
-    const qreal fitScale = available.width() / pagePoints.width();
-    const qreal scale = fitScale * m_zoomFactor;
+    // 先计算“适合窗口宽度”的基础比例，再叠加用户选择的缩放比例。
+    // logicalSize 用于界面布局，renderSize 乘以设备像素比后用于实际渲染，
+    // 从而在高 DPI 屏幕上仍能保持清晰。
+    const qreal fitScale = available.width() / pagePoints.width(); // 页面适宽时的基础比例。
+    const qreal scale = fitScale * m_zoomFactor; // 叠加用户缩放后的最终比例。
     const QSize logicalSize(qMax(1, qRound(pagePoints.width() * scale)), qMax(1, qRound(pagePoints.height() * scale)));
-    const qreal devicePixelRatio = viewport()->devicePixelRatioF();
+    const qreal devicePixelRatio = viewport()->devicePixelRatioF(); // 屏幕物理像素与逻辑像素之比。
     const QSize renderSize(qMax(1, qRound(logicalSize.width() * devicePixelRatio)),
                            qMax(1, qRound(logicalSize.height() * devicePixelRatio)));
     if (renderSize != m_renderedSize) {
@@ -235,6 +238,8 @@ QPointF PdfSelectableView::pagePointAt(const QPointF &position) const
         return {};
     }
 
+    // 将鼠标所在的视图坐标线性映射为 PDF 页面的原始坐标。
+    // 需要先减去页面左上角偏移，再按“页面尺寸 / 显示尺寸”缩放。
     const QSizeF pagePoints = m_document->pagePointSize(m_currentPage);
     return QPointF(
         (position.x() - m_pageRect.x()) * pagePoints.width() / m_pageRect.width(),
@@ -247,6 +252,8 @@ QPointF PdfSelectableView::viewPointAt(const QPointF &position) const
         return {};
     }
 
+    // pagePointAt 的逆变换：把 PDF 返回的文字选区坐标映射回视图，
+    // 供 paintEvent 在正确位置绘制选区高亮。
     const QSizeF pagePoints = m_document->pagePointSize(m_currentPage);
     return QPointF(
         m_pageRect.x() + position.x() * m_pageRect.width() / pagePoints.width(),
@@ -259,6 +266,7 @@ void PdfSelectableView::updateSelection(const QPointF &position)
         return;
     }
 
+    // 把拖拽终点限制在页面矩形内，避免向页面外拖动时产生无效坐标。
     const QPointF clampedPosition(
         qBound(m_pageRect.left(), position.x(), m_pageRect.right()),
         qBound(m_pageRect.top(), position.y(), m_pageRect.bottom()));

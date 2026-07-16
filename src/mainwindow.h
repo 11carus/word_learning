@@ -72,9 +72,9 @@ private:
     QPushButton *m_hardButton = nullptr;
     QPushButton *m_goodButton = nullptr;
     QPushButton *m_easyButton = nullptr;
-    QList<WordEntry> m_dueWords;
-    QHash<int, int> m_sessionReviewAttempts;
-    int m_currentReviewIndex = -1;
-    static constexpr int kMaximumSessionAttempts = 3;
-    QString m_currentPdfPath;
+    QList<WordEntry> m_dueWords;                // 本轮复习队列；未掌握的单词会再次追加到末尾。
+    QHash<int, int> m_sessionReviewAttempts;    // 单词 ID 到本轮已出现次数的映射。
+    int m_currentReviewIndex = -1;              // 当前单词在复习队列中的索引；-1 表示没有任务。
+    static constexpr int kMaximumSessionAttempts = 3; // 单词在一轮中的最大出现次数。
+    QString m_currentPdfPath;                   // 当前打开的 PDF 文件路径。
 };

@@ -94,14 +94,17 @@ bool DictionaryManager::importEcdictCsv(const QString &filePath)
     insertQuery.prepare(QStringLiteral(
         "INSERT OR REPLACE INTO dictionary_entries (word, translation) VALUES (:word, :translation)"));
 
-    QString field;
-    QStringList record;
-    QHash<QString, int> columns;
-    bool inQuotes = false;
-    bool headerRead = false;
-    int importedCount = 0;
-    bool failed = false;
+    QString field;                 // 正在解析的当前字段内容。
+    QStringList record;            // 当前一行已经解析出的全部字段。
+    QHash<QString, int> columns;   // 规范化表头名称到列号的映射。
+    bool inQuotes = false;         // 当前字符是否位于双引号包围的字段内。
+    bool headerRead = false;       // 是否已经读取并解析第一行表头。
+    int importedCount = 0;         // 成功写入数据库的有效词条数量。
+    bool failed = false;           // 任一 SQL 插入失败后终止后续扫描。
 
+    // 完成一行 CSV 记录：第一行建立“列名 -> 列号”的映射，
+    // 后续记录再根据表头位置提取 word 和 translation/definition。
+    // 这样即使 ECDICT 的列顺序发生变化，导入逻辑仍然有效。
     const auto consumeRecord = [&]() {
         record.append(field);
         field.clear();
@@ -136,6 +139,11 @@ bool DictionaryManager::importEcdictCsv(const QString &filePath)
         record.clear();
     };
 
+    // 单次扫描 CSV 的有限状态机。
+    // inQuotes == false：逗号结束字段，换行结束记录；
+    // inQuotes == true ：逗号和换行都是字段内容，连续两个双引号表示
+    //                    字段内的一个双引号。
+    // 因此这里不能简单使用 split(',')，否则会错误拆分带逗号的释义。
     for (qsizetype index = 0; index < csv.size() && !failed; ++index) {
         const QChar character = csv.at(index);
         if (inQuotes) {

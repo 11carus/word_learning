@@ -103,10 +103,10 @@ QWidget *MainWindow::createReviewPage()
     m_reviewAnswerLabel->setMinimumHeight(110);
 
     m_showAnswerButton = new QPushButton(tr("显示答案"), page);
-    m_againButton = new QPushButton(tr("Again\n重置间隔"), page);
-    m_hardButton = new QPushButton(tr("Hard\n较短间隔"), page);
-    m_goodButton = new QPushButton(tr("Good\n正常间隔"), page);
-    m_easyButton = new QPushButton(tr("Easy\n延长间隔"), page);
+    m_againButton = new QPushButton(tr("Again"), page);
+    m_hardButton = new QPushButton(tr("Hard"), page);
+    m_goodButton = new QPushButton(tr("Good"), page);
+    m_easyButton = new QPushButton(tr("Easy"), page);
 
     auto *ratingLayout = new QHBoxLayout();
     ratingLayout->addWidget(m_againButton);
@@ -598,6 +598,10 @@ void MainWindow::rateCurrentWord(ReviewRating rating)
     }
 
     const int attempts = m_sessionReviewAttempts.value(entry.id, 1);
+
+    // 除 Easy 外，把尚未达到次数上限的单词追加到当前队列末尾。
+    // 用户会先复习队列中的其他单词，稍后再看到该词；次数上限可以
+    // 防止某个反复遗忘的单词让本轮任务无限循环。
     const bool shouldRepeatInSession = rating != ReviewRating::Easy
         && attempts < kMaximumSessionAttempts;
     if (shouldRepeatInSession) {
@@ -607,6 +611,9 @@ void MainWindow::rateCurrentWord(ReviewRating rating)
         repeatedEntry.intervalDays = schedule.intervalDays;
         repeatedEntry.easeFactor = schedule.easeFactor;
         repeatedEntry.lapseCount = schedule.lapseCount;
+
+        // 同一轮再次评分时使用刚更新的调度状态。复习日期设为今天，
+        // 因而第二次出现不会错误获得“跨天延迟复习奖励”。
         repeatedEntry.lastReviewDate = QDate::currentDate();
         m_dueWords.append(repeatedEntry);
     }

@@ -4,9 +4,9 @@
 
 ## 当前状态
 - **当前阶段：** 阶段 5——PDF 阅读选词扩展
-- **总体状态：** 课程 MVP 已通过用户手动验收，README 已完成更新
+- **总体状态：** 课程 MVP 已通过用户手动验收，核心算法说明与源码注释已补充
 - **下一步：** 使用真实文本型 PDF 和真实 ECDICT CSV 手动验收阅读、自动释义与入库流程
-- **最后更新：** 2026-07-13 16:20:00 +08:00
+- **最后更新：** 2026-07-16 13:14:22 +08:00
 
 ## 2026-07-13
 
@@ -324,6 +324,35 @@
   - `docs/course-delivery.md`
   - `task_plan.md`
   - `findings.md`
+  - `progress.md`
+
+### 23. 精简复习评分按钮
+- **状态：** implementation complete，待用户复测
+- 根据用户截图，移除 Again / Hard / Good / Easy 按钮中显示的“间隔”文字；动态间隔仍只在评分后的状态栏中显示。
+- 已运行 `cmake --build --preset debug` 与 `git diff --check`，构建和格式检查通过。
+- **修改文件：**
+  - `src/mainwindow.cpp`
+  - `progress.md`
+
+### 24. 核心算法文档与源码注释
+- **状态：** complete
+- 为复习调度、到期单词排序、本轮重复队列、CSV 状态机和 PDF 坐标映射补充中文算法注释。
+- 为调度参数、`ReviewSchedule`、`WordEntry`、CSV 解析状态、PDF 视图状态和复习队列成员补充变量含义、单位与取值说明。
+- 在项目根目录新增 `CORE_ALGORITHMS.md`，集中记录核心文件、算法公式、关键变量、数据结构、复杂度和推荐阅读顺序。
+- 保留工作区原有的评分按钮精简改动；本次 GitHub 更新不包含本地 `.vscode/` 配置和 Word 文档。
+- 已运行 `git diff --check`，格式检查通过。
+- **修改文件：**
+  - `CORE_ALGORITHMS.md`
+  - `src/review/reviewscheduler.h`
+  - `src/review/reviewscheduler.cpp`
+  - `src/database/databasemanager.h`
+  - `src/database/databasemanager.cpp`
+  - `src/dictionary/dictionarymanager.h`
+  - `src/dictionary/dictionarymanager.cpp`
+  - `src/pdf/pdfselectableview.h`
+  - `src/pdf/pdfselectableview.cpp`
+  - `src/mainwindow.h`
+  - `src/mainwindow.cpp`
   - `progress.md`
 
 ## 测试结果

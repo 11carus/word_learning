@@ -99,6 +99,10 @@ QList<WordEntry> DatabaseManager::dueWords(const QDate &date) const
 {
     QList<WordEntry> entries;
     QSqlQuery query(m_database);
+
+    // 每日复习队列只包含今天及以前到期的单词。
+    // 先按到期日期升序排列，让逾期最久的单词优先；日期相同时，
+    // 再按忽略大小写的字母顺序排列，保证展示顺序稳定。
     query.prepare(QStringLiteral(R"(
         SELECT id, word, definition, example, source, next_review_date, review_count,
                interval_days, ease_factor, lapse_count, last_review_date, created_at
@@ -203,6 +207,8 @@ bool DatabaseManager::deleteWord(int id)
 bool DatabaseManager::recordReview(int wordId, int rating, const QDate &nextReviewDate, int intervalDays,
                                    double easeFactor, int lapseCount, const QDate &reviewDate)
 {
+    // 写入复习日志和更新单词调度状态必须同时成功。
+    // 使用事务可以避免只写入其中一张表而造成数据不一致。
     if (!m_database.transaction()) {
         setLastError(m_database.lastError().text());
         return false;
