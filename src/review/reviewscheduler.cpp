@@ -10,12 +10,12 @@ constexpr double kMinimumEaseFactor = 1.3;
 constexpr double kMaximumEaseFactor = 3.0;
 }
 
-ReviewSchedule ReviewScheduler::schedule(ReviewRating rating,
-                                          int previousIntervalDays,
-                                          double previousEaseFactor,
-                                          int previousLapseCount,
-                                          const QDate &lastReviewDate,
-                                          const QDate &today)
+ReviewSchedule ReviewScheduler::schedule(ReviewRating rating, //评分
+                                          int previousIntervalDays, //复习间隔
+                                          double previousEaseFactor, //难度因子
+                                          int previousLapseCount, //累计遗忘单词次数
+                                          const QDate &lastReviewDate, //实际复习日期
+                                          const QDate &today) //今天；计算经过天数
 {
     ReviewSchedule result;
 
