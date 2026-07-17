@@ -79,3 +79,16 @@ build/debug/wordflow_dictionary.sqlite3
 代码仓库：[11carus/word_learning](https://github.com/11carus/word_learning)
 
 课程报告的模块说明、测试记录和演示截图清单见 [course-delivery.md](docs/course-delivery.md)。
+完整文档索引见 [docs/README.md](docs/README.md)，本地词典与运行数据库说明见 [data/README.md](data/README.md)。
+项目目录和核心模块关系见 [项目结构图](docs/project-structure.md)。
+断点设置和 VS Code 调试流程见 [Debug 调试指南](docs/debugging-guide.md)。
+
+主要目录：
+
+```text
+src/             C++/Qt 源码
+docs/            项目文档、课程资料和实验报告
+data/            不提交到 Git 的本地输入数据
+build/           CMake 构建产物和运行数据库
+.vscode/         VS Code 构建与调试配置
+```

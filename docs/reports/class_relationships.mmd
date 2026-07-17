@@ -1,0 +1,20 @@
+flowchart LR
+    UI[MainWindow\n界面与流程控制]
+    DB[DatabaseManager\nSQLite 持久化]
+    RS[ReviewScheduler\n复习计划算法]
+    PDF[PdfSelectableView\nPDF 渲染与选区]
+    DOC[QPdfDocument\nPDF 文本层]
+    DICT[DictionaryManager\nECDICT 查询]
+    WORD[WordEntry\n单词与学习状态]
+    PLAN[ReviewSchedule\n下一次复习计划]
+    LOG[(words / review_logs)]
+    UI -->|调用| DB
+    UI -->|评价后调用| RS
+    RS -->|生成| PLAN
+    UI -->|控制| PDF
+    PDF -->|依赖| DOC
+    UI -->|查询| DICT
+    DB -->|读写| LOG
+    DB -->|返回| WORD
+    UI -->|更新| WORD
+    PLAN -->|写入| DB

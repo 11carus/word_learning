@@ -88,9 +88,16 @@
 - PDF 扩展是否必须在最终演示中出现，还是作为加分功能说明。
 
 ## 资源
-- 课程任务书：`程序语言课程设计-2026.pptx`
+- 课程任务书：`docs/course/程序语言课程设计-2026.pptx`
 - 技能安装记录：`docs/installed-skills.md`
 - 开发环境记录：`docs/development-environment.md`
+
+## 项目目录约定
+- `src/` 只保存 C++/Qt 源码，继续使用单一 CMake 可执行目标。
+- `docs/course/` 保存课程任务资料和报告模板，`docs/reports/` 保存成品报告。
+- `data/` 保存不提交到 Git 的本地输入数据；当前为 ECDICT CSV。
+- `build/` 保存构建产物及程序运行时生成的 SQLite 数据库。
+- `.cache/` 保存可删除的本地工具日志，并由 `.gitignore` 忽略。
 
 ## 视觉/浏览器发现
 - Qt 官方资料确认 Qt 6.10 Windows MinGW配置使用 MinGW-w64 13.1。

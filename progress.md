@@ -378,6 +378,15 @@
 | PDF 阅读编译 | `qt-cmake --preset debug` + `cmake --build --preset debug` | Qt PDF 模块、文本提取和选词入库代码可编译 | 配置与编译链接成功 | passed |
 | PDF 视觉阅读与词典编译 | `qt-cmake --preset debug` + `cmake --build --preset debug` | PdfWidgets、CSV 词典导入与自动释义代码可编译 | 配置与编译链接成功 | passed |
 
+### 25. 项目目录整理
+- **状态：** complete
+- 保留现有源码层次和单一 Qt/CMake 目标，不进行无收益的模块拆分。
+- 将课程 PPT 与报告模板移入 `docs/course/`，将 WordFlow 实验报告移入 `docs/reports/`。
+- 将本地 `ecdict.csv` 移入 `data/`，将 `aqtinstall.log` 移入已忽略的 `.cache/`。
+- 新增 `docs/README.md` 与 `data/README.md`，并在根 README 中补充目录说明。
+- 保留用户未提交的 `.vscode/` 配置，没有覆盖或删除。
+- 已使用 Qt 6.10.3 重新生成 Debug 构建文件；`cmake --build --preset debug` 通过，Ninja 报告目标已是最新状态。
+
 ## 错误日志
 | 环节 | 错误 | 尝试次数 | 解决方案 | 状态 |
 |------|------|---------|---------|------|
@@ -391,6 +400,7 @@
 | Git核对 | 项目尚未初始化Git仓库 | 1 | 已执行 `git init -b main` | resolved |
 | GitHub远程 | 远程仓库地址尚未提供 | 1 | 用户提供仓库后已添加 `origin` 并抓取远程 `main` | resolved |
 | Git提交身份 | 本机未配置 `user.name` / `user.email` | 1 | 已在仓库本地配置 GitHub noreply 身份 | resolved |
+| 目录盘点 | PowerShell 在 `foreach` 后直接接管道时报空管道元素 | 2 | 先收集为数组，再格式化输出 | resolved |
 
 ## 五问重启检查
 | 问题 | 答案 |
